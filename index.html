@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf8" />
+	<script id="frag1" type="x-shader/x-fragment">
+
+		precision mediump float;
+
+		uniform sampler2D state;
+		uniform vec2 scale;
+
+		int at(vec2 offset)
+		{
+			
+			return int( texture2D( state, (gl_FragCoord.xy + offset) * scale ).r );
+
+		}
+
+		void main() 
+		{
+			
+			int count = at(vec2(-1, 0)) + at(vec2(-1,-1)) + at(vec2(0,-1)) + at(vec2(1, -1)) + at(vec2(1, 0))
+				+ at(vec2(1,1)) + at(vec2(0, 1)) + at(vec2(-1, 1));
+
+			if(count == 2) {
+				//float c = float(at(vec2(0.0, 0.0)));
+				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+			
+			} else if (count == 3) {
+
+				//gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+			} else {
+
+				gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+
+			}
+
+
+		}
+
+
+	</script>
+	<script id="frag2" type="x-shader/x-fragment">
+
+		precision mediump float;
+
+		uniform sampler2D state;
+		uniform vec2 scale;
+
+		void main() {
+			
+			gl_FragColor = texture2D( state, gl_FragCoord.xy * scale );
+
+		}
+
+	</script>
+	<script id="vert1" type="x-shader/x-vertex">
+
+		precision mediump float;
+
+		attribute vec2 quad;
+
+		void main() 
+		{
+			
+			gl_Position = vec4(quad, 0, 1.0);
+
+		}
+
+	</script>
+	
+</head>
+<body>
+	<p>
+		Game of life 
+	</p>
+	<div> 
+		<canvas id="glCanvas" width="512" height="512"> </canvas> 
+	</div>
+<script src="conway.js"> </script>	
+</body>
+</html>
