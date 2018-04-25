@@ -1,4 +1,12 @@
 
+let rule = 1
+let scale = 1
+let framerate = 60
+let frame = 0
+let requestId = undefined
+let animatefunc = undefined
+let pause = false
+
 function setup() {
 
 	const canvas = document.getElementById("glCanvas")
@@ -9,30 +17,66 @@ function setup() {
 		return
 	}
 
-	//console.log(gl)
+	let pow2widths = [ 128, 256, 512, 1024, 2048 ]
+	let width
 
-	let width = canvas.height
-	let height = canvas.width
+	for(let w of pow2widths)
+		if(window.innerWidth < w) {
+			width = w//canvas.height
+			break
+		}
+
+	/*
+		options:
+		scale = 1, framerate = 60fps, rule = conway, width
+	*/
+	 
+	let height = width//canvas.width
+	console.log(width)
+	console.log(height)
 
 	let vertShader1 = document.getElementById("vert1").text
 	let fragShader1 = document.getElementById("frag1").text
 	let fragShader2 = document.getElementById("frag2").text
 
-	//console.log(document.getElementById("vert1").text)
+	//let scale = 1
 
-	const conway = new Conway(gl, height, width, 1, fragShader1, fragShader2, vertShader1)
+	const conway = new Conway(gl, height, width, scale, fragShader1, fragShader2, vertShader1)
+
+	//let frame = 0;
+	//let framerate = 1
+
+	let starttime = Date.now()
+	let last = starttime
 
 	function animate(timestamp) {
 
-		conway.next()
-		conway.draw()
-		requestAnimationFrame(animate)
+		requestId = requestAnimationFrame(animate)
+
+		let now = Date.now()
+
+		let elapsed = now - last
+
+		//console.log(elapsed)
+		if(elapsed > (1000 / framerate)) {
+			
+			frame++
+			conway.next()
+			conway.draw()
+			//console.log("drawing")
+			
+			last = now - (elapsed % (1000 / framerate))
+		}
+
+		//last = now
 	
 	}
 
-	conway.draw()
+	animatefunc = animate
 
-	//requestAnimationFrame(animate)
+	//conway.draw()
+	console.log("calling animate...")
+	requestId = requestAnimationFrame(animate)
 
 }
 
@@ -40,11 +84,11 @@ function Conway( gl, height, width, scale, fragShader1, fragShader2, vertShader 
 
 	this.gl = gl
 
-	this.gameWidth = width
-	this.gameHeight = height
+	this.gameWidth = width / scale 
+	this.gameHeight = height / scale 
 
-	this.viewWidth = width * scale
-	this.viewHeight = height * scale
+	this.viewWidth = width // / scale
+	this.viewHeight = height /// scale
 
 	this.scaleWidth = scale
 	this.scaleHeight = scale
@@ -61,8 +105,8 @@ function Conway( gl, height, width, scale, fragShader1, fragShader2, vertShader 
 
 	*/
 	//wrap, filter, type, format 
-	this.back = new Texture(gl, gl.REPEAT, gl.NEAREST, null, gl.RGBA, width, height)
-	this.front = new Texture(gl, gl.REPEAT, gl.NEAREST, null, gl.RGBA, width, height)
+	this.back = new Texture(gl, gl.REPEAT, gl.NEAREST, null, gl.RGBA, this.gameWidth, this.gameHeight)
+	this.front = new Texture(gl, gl.REPEAT, gl.NEAREST, null, gl.RGBA, this.gameWidth, this.gameHeight)
 	this.random()
 
 	gl.disable(gl.DEPTH_TEST)
@@ -122,7 +166,7 @@ Conway.prototype.set = function(state) {
 
 	}
 	//console.log(newState.slice(0,100) )
-	this.front.setImage(newState, this.viewWidth, this.viewHeight)
+	this.front.setImage(newState, this.gameWidth, this.gameHeight)
 	return this
 
 }
@@ -153,12 +197,17 @@ Conway.prototype.next = function () {
 	this.step.use()
 	.setAttribute('quad', this.quad, 2)
 	.setUniform('state', 'uniform1i', 0)
-	.setUniform('scale', 'uniform2fv', new Float32Array([this.scaleWidth, this.scaleHeight]))
+	.setUniform('scale', 'uniform2fv', new Float32Array([this.gameWidth, this.gameHeight]))
 	.draw(gl.TRIANGLE_STRIP, 0, 4)
+
+	if( gl.getError() !== gl.NO_ERROR )
+		throw new Error("rendering error")
 
 	this.swap()
 
 	this.gameFrameBuffer.unbind()
+
+
 
 	return this
 }
@@ -176,7 +225,7 @@ Conway.prototype.draw = function () {
 	this.diplay.use()
 	.setAttribute('quad', this.quad, 2)
 	.setUniform('state', 'uniform1i', 0)
-	.setUniform('scale', 'uniform2fv', new Float32Array([this.scaleWidth, this.scaleHeight]) )
+	.setUniform('scale', 'uniform2fv', new Float32Array([this.viewWidth, this.viewHeight]) )
 	.draw(gl.TRIANGLE_STRIP, 0, 4)
 
 	if( gl.getError() !== gl.NO_ERROR )
@@ -211,7 +260,7 @@ Framebuffer.prototype.attach = function (texture) {
 	
 	let gl = this.gl
 	this.bind()
-	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHEMENT0, gl.TEXTURE_2D, texture.texture, 0)
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0)
 	return this
 
 }
@@ -247,8 +296,7 @@ function Texture (gl, wrap, filter, type, format, width, height) {
 Texture.prototype.setImage = function(image, width, height) {
 
 	let gl = this.gl
-	
-	//console.log(width, height)
+
 	gl.bindTexture(gl.TEXTURE_2D, this.texture)
 	gl.texImage2D(gl.TEXTURE_2D, 0, this.format, width, height, 0, this.format, this.type, image)
 	return this
@@ -287,8 +335,6 @@ Texture.prototype.clear = function( width, height ) {
 
 }
 
-
-
 function Program (gl, vertexSource, fragmentSource) {
 	
 	this.gl = gl
@@ -301,7 +347,6 @@ function Program (gl, vertexSource, fragmentSource) {
 
 	if(!this.gl.getProgramParameter(program, gl.LINK_STATUS))
 		throw new Error(this.gl.getProgramInfoLog(program))
-	//this.check(program, this.gl.getProgramParameter, gl.LINK_STATUS)
 
 }
 
@@ -312,21 +357,12 @@ Program.prototype.createShader = function (source, type) {
 	gl.shaderSource(shader, source)
 	gl.compileShader(shader)
 
-	//this.check(shader, this.gl.getShaderParameter, gl.COMPILE_STATUS)
 	if(!this.gl.getShaderParameter(shader, gl.COMPILE_STATUS))
 		throw new Error(this.gl.getShaderInfoLog(shader))
 
 	return shader
 
 }
-
-Program.prototype.check = function (shader, func, arg) {
-
-	if(! func(shader, arg))
-		throw new Error(this.gl.getShaderInfoLog(shader))
-
-}
-
 
 Program.prototype.use = function() {
 
@@ -337,10 +373,7 @@ Program.prototype.use = function() {
 
 Program.prototype.setUniform = function( name, method, value ) {
 
-	this.variables[name] = this.variables[name] || this.gl.getUniformLocation(this.program, name)
-
-	console.log(this.variables)
-	
+	this.variables[name] = this.variables[name] || this.gl.getUniformLocation(this.program, name)	
 	this.gl[method](this.variables[name], value)
 
 	return this
@@ -387,7 +420,6 @@ ArrayBuffer.prototype.bind = function( ) {
 ArrayBuffer.prototype.set = function( data ) {
 
 	let gl = this.gl
-	//this.bind()
 	gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
 	return this
 
@@ -402,5 +434,64 @@ try {
 } catch(error) {
 
 	console.log(error)
+
+}
+
+document.addEventListener('DOMContentLoaded',function() {
+
+    document.querySelector('select[name="rules"]').onchange = ruleChangeHandler
+    document.querySelector('select[name="scale"]').onchange = scaleChangeHandler
+    document.querySelector('input[name="fps"]').onchange = fpsChangeHandler
+    //document.querySelector('button[name="pause"]').onchange = pauseHandler
+
+},false);
+
+function ruleChangeHandler(event) {
+    // You can use “this” to refer to the selected element.
+   // if(!event.target.value) alert('Please Select One');
+    console.log(event.target.value)
+
+    cancelAnimationFrame(requestId)
+
+    setup()
+
+}
+
+function scaleChangeHandler(event) {
+
+	console.log(event.target.value)
+
+	cancelAnimationFrame(requestId)
+	scale = parseInt(event.target.value)
+	setup()
+
+}
+
+function fpsChangeHandler(event) {
+
+	console.log(event.target.value)
+
+	cancelAnimationFrame(requestId)
+	let fps = parseInt( event.target.value )
+
+	if(Number.isInteger(fps) && fps > 0) {
+		
+		framerate = fps
+		setup()
+
+	}
+
+
+}
+
+function pauseHandler(event) {
+
+	if(!pause) {
+		pause = true 
+		cancelAnimationFrame(animatefunc)
+	} else {
+		pause = false
+		requestAnimationFrame(animatefunc)
+	}
 
 }
