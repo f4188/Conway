@@ -1,11 +1,15 @@
 
-let rule = 1
-let scale = 1
-let framerate = 60
-let frame = 0
-let requestId = undefined
-let animatefunc = undefined
-let pause = false
+let config = {
+	
+	rule : 1.
+	scale : 1,
+	framerate : 60,
+	frame : 0,
+	requestId : undefined,
+	animatefunc : undefined,
+	pause : false
+
+}
 
 function setup() {
 
@@ -22,7 +26,7 @@ function setup() {
 
 	for(let w of pow2widths)
 		if(window.innerWidth < w) {
-			width = w//canvas.height
+			width = w
 			break
 		}
 
@@ -31,52 +35,46 @@ function setup() {
 		scale = 1, framerate = 60fps, rule = conway, width
 	*/
 	 
-	let height = width//canvas.width
-	console.log(width)
-	console.log(height)
+	let height = width
+	
+	console.log(`Starting up with dim: ${width}`)
 
 	let vertShader1 = document.getElementById("vert1").text
 	let fragShader1 = document.getElementById("frag1").text
 	let fragShader2 = document.getElementById("frag2").text
 
-	//let scale = 1
+	let scale = config.scale
 
 	const conway = new Conway(gl, height, width, scale, fragShader1, fragShader2, vertShader1)
-
-	//let frame = 0;
-	//let framerate = 1
 
 	let starttime = Date.now()
 	let last = starttime
 
 	function animate(timestamp) {
 
-		requestId = requestAnimationFrame(animate)
+		config.requestId = requestAnimationFrame(animate)
 
 		let now = Date.now()
 
 		let elapsed = now - last
 
-		//console.log(elapsed)
-		if(elapsed > (1000 / framerate)) {
+		if(elapsed > (1000 / config.framerate)) {
 			
-			frame++
+			config.frame++
 			conway.next()
 			conway.draw()
-			//console.log("drawing")
 			
-			last = now - (elapsed % (1000 / framerate))
-		}
+			last = now - (elapsed % (1000 / config.framerate))
 
-		//last = now
+		}
 	
 	}
 
-	animatefunc = animate
+	config.animatefunc = animate
 
-	//conway.draw()
 	console.log("calling animate...")
-	requestId = requestAnimationFrame(animate)
+
+	config.requestId = requestAnimationFrame(animate)
 
 }
 
@@ -127,7 +125,7 @@ Conway.prototype.swap = function() {
 	this.front.subset()
 }*/
 
-Conway.prototype.random = function () {
+Conway.prototype.random = function ( numstates ) {
 
 	let size = this.gameHeight * this.gameWidth
 	let state = new Uint8Array(size) 
@@ -450,10 +448,7 @@ function ruleChangeHandler(event) {
     // You can use “this” to refer to the selected element.
    // if(!event.target.value) alert('Please Select One');
     console.log(event.target.value)
-
-    cancelAnimationFrame(requestId)
-
-    setup()
+    reset()
 
 }
 
@@ -461,9 +456,10 @@ function scaleChangeHandler(event) {
 
 	console.log(event.target.value)
 
-	cancelAnimationFrame(requestId)
-	scale = parseInt(event.target.value)
-	setup()
+	// change rule
+
+	config.scale = parseInt(event.target.value)
+	reset()
 
 }
 
@@ -471,27 +467,40 @@ function fpsChangeHandler(event) {
 
 	console.log(event.target.value)
 
-	cancelAnimationFrame(requestId)
 	let fps = parseInt( event.target.value )
 
-	if(Number.isInteger(fps) && fps > 0) {
-		
-		framerate = fps
-		setup()
-
-	}
-
+	if(Number.isInteger(fps) && fps > 0)		
+		config.framerate = fps
 
 }
 
+function resetHandler(event) {
+
+	reset()
+
+}
+
+function reset() {
+
+	cancelAnimationFrame(requestId)
+	setup()
+
+}
+
+
+
 function pauseHandler(event) {
 
-	if(!pause) {
-		pause = true 
-		cancelAnimationFrame(animatefunc)
+	if(!config.pause) {
+
+		cancelAnimationFrame(requestId)
+
 	} else {
-		pause = false
+
 		requestAnimationFrame(animatefunc)
+
 	}
+
+	config.pause = !config.pause
 
 }

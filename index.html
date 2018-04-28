@@ -26,6 +26,57 @@
 	}
 	
 	</style>
+	<script id="frag3" type="x-shader/x-fragment">
+
+		precision mediump float;
+
+		uniform sampler2D state;
+		uniform vec2 scale;
+
+		int at(vec2 offset)
+		{
+			
+			return int( texture2D( state, (gl_FragCoord.xy + offset) / scale ).r );
+
+		}
+
+		int at2(vec2 offset)
+		{
+			
+			return int( texture2D( state, (gl_FragCoord.xy + offset) / scale ).b );
+
+		}
+
+		void main() 
+		{
+
+			int cur = at(vec2(0, 0)); 
+			if( cur == 2  ) {
+				gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+			} else if ( cur == 1 )
+				gl_FragColor = vec4(2.0, 2.0, 1.0, 1.0)
+
+
+			
+			int count = at(vec2(-1, 0)) + at(vec2(-1,-1)) + at(vec2(0,-1)) + at(vec2(1, -1)) + at(vec2(1, 0))
+				+ at(vec2(1,1)) + at(vec2(0, 1)) + at(vec2(-1, 1));
+
+			if (count == 2) {
+
+		       // float v = float(at(vec2(0.0, 0.0)));
+		        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+		    } else {
+
+		        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		        
+		    }
+
+
+		}
+
+
+	</script>
 	<script id="frag1" type="x-shader/x-fragment">
 
 		precision mediump float;
@@ -117,15 +168,16 @@
        	<input name="fps" id="fps" type="number" min="-10" max="60" step="1" value ="60"/>
        	<label for="width"> width </label>
        	<select name="width">
-            <option> 32 </option>
-            <option> 64 </option>
-            <option> 128 </option>
-            <option> 256 </option>
-            <option> 512 </option>
-            <option> 1024 </option>
-            <option> 2048 </option>
+            <option value=32> 32 </option>
+            <option value=64> 64 </option>
+            <option value=128> 128 </option>
+            <option value=256> 256 </option>
+            <option value=512> 512 </option>
+            <option value=1024> 1024 </option>
+            <option value=2048> 2048 </option>
         </select>
        	<button> PAUSE </button>
+       	<button> RESET </button>
    	</div>
 	<div> 
 		<canvas id="glCanvas" width="1024" height="1024"> </canvas> 
